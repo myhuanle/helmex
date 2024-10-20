@@ -3,6 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"os"
@@ -132,12 +137,25 @@ func buildChartFrom(options *applyCmdOptions, m *Manifest, _ io.Writer) error {
 		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
 			// pull from the remote if the cache does not exist;
 			if err := gitClone(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, cacheDir, service.Template.GitRef.SSHKeyPath); err != nil {
-				return fmt.Errorf("failed to git clone service %s from %s, %w", service.Name, service.Template.GitRef.URL, err)
+				return fmt.Errorf("failed to git clone service %s's template from %s, %w", service.Name, service.Template.GitRef.URL, err)
 			}
 		}
 		copyFromPath := filepath.Join(cacheDir, service.Template.GitRef.Path)
-		if err := copyFile(copyFromPath, serviceChartDir); err != nil {
+		if err := copyTemplates(copyFromPath, serviceChartDir); err != nil {
 			return fmt.Errorf("failed to copy chart template for service %s, %w", service.Name, err)
+		}
+
+		// copy values;
+		cacheDir := filepath.Join(gitCacheDir, gitRefHash(service.Value.GitRef))
+		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
+			// pull from the remote if the cache does not exist;
+			if err := gitClone(service.Value.GitRef.URL, service.Value.GitRef.Branch, service.Value.GitRef.Commit, cacheDir, service.Value.GitRef.SSHKeyPath); err != nil {
+				return fmt.Errorf("failed to git clone service %s's value from %s, %w", service.Name, service.Template.GitRef.URL, err)
+			}
+		}
+		copyFromPath := filepath.Join(cacheDir, service.Value.GitRef.Path)
+		if err := copyValues(copyFromPath, serviceChartDir); err != nil {
+			return fmt.Errorf("failed to copy chart values for service %s, %w", service.Name, err)
 		}
 	}
 
@@ -189,7 +207,7 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 	return nil
 }
 
-func copyFile(from, toDir string) error {
+func copyTemplates(from, toDir string) error {
 	if err := os.RemoveAll(toDir); err != nil {
 		return fmt.Errorf("failed to clear target directory, %w", err)
 	}
@@ -328,4 +346,43 @@ func (r GitRef) Validate(fieldPath string) error {
 		}
 	}
 	return nil
+}
+
+type SecretTool struct {
+	publicKey  *rsa.PublicKey
+	privateKey *rsa.PrivateKey
+}
+
+func NewSecretEncryptor(publicKeyFile string) (*SecretTool, error) {
+	b, err := os.ReadFile(publicKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key from file, %w", err)
+	}
+	block, _ := pem.Decode(b)
+	if block == nil {
+		return nil, fmt.Errorf("bad public key, could not decode it as pem")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("bad public key, %w", err)
+	}
+	rsaPub, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("invalid rsa public key")
+	}
+	return &SecretTool{
+		publicKey:  rsaPub,
+		privateKey: nil,
+	}, nil
+}
+
+func (t *SecretTool) Encrypt(data []byte) (string, error) {
+	if t.publicKey == nil {
+		return "", errors.New("secret tool had not been inited as encryptor")
+	}
+	encryptedData, err := rsa.EncryptPKCS1v15(rand.Reader, t.publicKey, data)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("helmsecret://%s", base64.StdEncoding.EncodeToString(encryptedData)), nil
 }
