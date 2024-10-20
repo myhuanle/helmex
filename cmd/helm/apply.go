@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 
@@ -118,25 +119,35 @@ func buildChartFrom(options *applyCmdOptions, m *Manifest, _ io.Writer) error {
 
 	// download all from remote;
 	gitCacheDir := filepath.Join(options.DataDir, "cache", "git")
+	if err := os.RemoveAll(gitCacheDir); err != nil {
+		return fmt.Errorf("failed to clear git cache directory, %w", err)
+	}
 	if err := os.MkdirAll(gitCacheDir, 0755); err != nil {
 		return fmt.Errorf("failed to create git cache directory, %w", err)
 	}
 	for _, service := range m.Services {
-		// skip to pull cache if it had been existed;
-		targetDir := filepath.Join(gitCacheDir, gitRefHash(service.Template.GitRef))
-		targetGitFile := filepath.Join(targetDir, ".git")
-		if _, err := os.Stat(targetGitFile); err == nil {
-			continue
+		serviceChartDir := filepath.Join(chartsDir, service.Name)
+		// copy templates;
+		cacheDir := filepath.Join(gitCacheDir, gitRefHash(service.Template.GitRef))
+		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
+			// pull from the remote if the cache does not exist;
+			if err := gitClone(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, cacheDir, service.Template.GitRef.SSHKeyPath); err != nil {
+				return fmt.Errorf("failed to git clone service %s from %s, %w", service.Name, service.Template.GitRef.URL, err)
+			}
 		}
-		// pull from the remote if the cache does not exist;
-		if err := gitClone(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, targetDir, service.Template.GitRef.SSHKeyPath); err != nil {
-			return fmt.Errorf("failed to git clone service %s from %s, %w", service.Name, service.Template.GitRef.URL, err)
+		copyFromPath := filepath.Join(cacheDir, service.Template.GitRef.Path)
+		if err := copyFile(copyFromPath, serviceChartDir); err != nil {
+			return fmt.Errorf("failed to copy chart template for service %s, %w", service.Name, err)
 		}
 	}
+
 	return nil
 }
 
 func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
+	if err := os.RemoveAll(toDir); err != nil {
+		return fmt.Errorf("failed to clear directory, %w", err)
+	}
 	if err := os.MkdirAll(toDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory, %w", err)
 	}
@@ -174,6 +185,28 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 		}); err != nil {
 			return fmt.Errorf("failed to checkout to %s, %w", commit, err)
 		}
+	}
+	return nil
+}
+
+func copyFile(from, toDir string) error {
+	if err := os.RemoveAll(toDir); err != nil {
+		return fmt.Errorf("failed to clear target directory, %w", err)
+	}
+	if err := os.MkdirAll(toDir, 0755); err != nil {
+		return fmt.Errorf("failed to create target directory, %w", err)
+	}
+
+	pathInfo, err := os.Stat(from)
+	if err != nil {
+		return fmt.Errorf("failed to stat %s, %w", from, err)
+	}
+	if pathInfo.IsDir() {
+		from = from + "/."
+	}
+	msg, err := exec.Command("cp", "-r", from, toDir).CombinedOutput()
+	if err != nil {
+		return errors.New(string(msg))
 	}
 	return nil
 }
