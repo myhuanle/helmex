@@ -161,6 +161,8 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 
 	// Add subcommands
 	cmd.AddCommand(
+		newApplyCmd(out),
+
 		// chart commands
 		newCreateCmd(out),
 		newDependencyCmd(actionConfig, out),
