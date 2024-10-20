@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/md5"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	gossh "golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 )
 
@@ -114,15 +117,19 @@ func buildChartFrom(options *applyCmdOptions, m *Manifest, _ io.Writer) error {
 	}
 
 	// download all from remote;
+	gitCacheDir := filepath.Join(options.DataDir, "cache", "git")
+	if err := os.MkdirAll(gitCacheDir, 0755); err != nil {
+		return fmt.Errorf("failed to create git cache directory, %w", err)
+	}
 	for _, service := range m.Services {
-		//fmt.Fprintf(logWriter, "[I] cloning service chart %s ...\n", service.Name)
-		if err := gitClone(
-			service.Template.GitRef.URL,
-			service.Template.GitRef.Branch,
-			service.Template.GitRef.Commit,
-			filepath.Join(chartsDir, service.Name),
-			service.Template.GitRef.SSHKeyPath,
-		); err != nil {
+		// skip to pull cache if it had been existed;
+		targetDir := filepath.Join(gitCacheDir, gitRefHash(service.Template.GitRef))
+		targetGitFile := filepath.Join(targetDir, ".git")
+		if _, err := os.Stat(targetGitFile); err == nil {
+			continue
+		}
+		// pull from the remote if the cache does not exist;
+		if err := gitClone(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, targetDir, service.Template.GitRef.SSHKeyPath); err != nil {
 			return fmt.Errorf("failed to git clone service %s from %s, %w", service.Name, service.Template.GitRef.URL, err)
 		}
 	}
@@ -134,18 +141,20 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 		return fmt.Errorf("failed to create directory, %w", err)
 	}
 
+	// read ssh key;
 	if sshKeyPath == "" {
 		sshKeyPath = filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
 	}
-	auth, err := ssh.NewPublicKeysFromFile("git", sshKeyPath, "")
+	publicKeys, err := ssh.NewPublicKeysFromFile("git", sshKeyPath, "")
 	if err != nil {
-		fmt.Printf("Error creating SSH public keys: %v\n", err)
-		os.Exit(1)
+		return err
 	}
+	publicKeys.HostKeyCallback = gossh.InsecureIgnoreHostKey()
 
+	// git clone;
 	repo, err := git.PlainClone(toDir, false, &git.CloneOptions{
 		URL:           url,
-		Auth:          auth,
+		Auth:          publicKeys,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
 		SingleBranch:  true,
 	})
@@ -167,6 +176,14 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 		}
 	}
 	return nil
+}
+
+func gitRefHash(gitRef *GitRef) string {
+	buff := bytes.NewBuffer(nil)
+	buff.WriteString(gitRef.URL)
+	buff.WriteString(gitRef.Branch)
+	buff.WriteString(gitRef.Commit)
+	return fmt.Sprintf("%x", md5.Sum(buff.Bytes()))
 }
 
 type Manifest struct {
