@@ -163,6 +163,8 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	cmd.AddCommand(
 		// extend commands;
 		newBuildCmd(out),
+		newTemplateXCmd(out),
+		newDiffUpgradeXCmd(out),
 
 		// chart commands
 		newCreateCmd(out),

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-type TemplateXCmdOptions struct {
+type UpgradeXCmdOptions struct {
 	// DataDir 临时数据目录;
 	// +required;
 	DataDir string
@@ -19,9 +19,12 @@ type TemplateXCmdOptions struct {
 	// Services 指定只渲染特定的服务模板, 默认渲染全部;
 	// +optional;
 	Services []string
+	// Install 是否设置 --install 选项;
+	// +optional, default is false;
+	Install bool
 }
 
-func (o TemplateXCmdOptions) Validate() error {
+func (o UpgradeXCmdOptions) Validate() error {
 	if o.DataDir == "" {
 		return errors.New("dataDir cannot be empty")
 	}
@@ -38,7 +41,7 @@ func (o TemplateXCmdOptions) Validate() error {
 	return nil
 }
 
-func RunTemplateX(options *TemplateXCmdOptions, out io.Writer) error {
+func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 	if err := options.Validate(); err != nil {
 		return fmt.Errorf("failed to validate input options, %w", err)
 	}
@@ -58,11 +61,14 @@ func RunTemplateX(options *TemplateXCmdOptions, out io.Writer) error {
 		}
 	}
 
-	// 执行渲染;
+	// 执行 upgrade;
 	for _, serviceName := range services {
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
-		args := []string{"template", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		args := []string{"upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		if options.Install {
+			args = append(args, "--install")
+		}
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = out
 		c.Stdout = out

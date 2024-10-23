@@ -9,8 +9,10 @@ import (
 
 type BuildCmdOptions struct {
 	// DataDir 临时数据目录;
+	// +required;
 	DataDir string
 	// Manifest 清单文件;
+	// +required;
 	Manifest string
 }
 
