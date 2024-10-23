@@ -9,19 +9,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newBuildCmd(out io.Writer) *cobra.Command {
-	options := &extend.BuildCmdOptions{}
+func newTemplateXCmd(out io.Writer) *cobra.Command {
+	options := &extend.TemplateXCmdOptions{}
 	cmd := &cobra.Command{
-		Use:   "build",
-		Short: "build helm chart from manifest",
+		Use:   "templatex",
+		Short: "template the helm chart",
 		RunE: func(_ *cobra.Command, args []string) error {
-			return extend.RunBuild(options, out)
+			return extend.RunTemplateX(options, out)
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVarP(&options.DataDir, "data-dir", "d", "./", "set the temporary data directory")
 	f.StringVarP(&options.Manifest, "file", "f", "", "set manifest file")
+	f.StringSliceVarP(&options.Services, "service", "s", []string{}, "set services to render template")
 
 	if err := cmd.MarkFlagRequired("file"); err != nil {
 		panic(err)

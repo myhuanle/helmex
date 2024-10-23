@@ -183,14 +183,6 @@ func loadManifest(file string) (*Manifest, error) {
 }
 
 func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
-	chartsDir := filepath.Join(options.DataDir, "charts")
-	if err := os.RemoveAll(chartsDir); err != nil {
-		return fmt.Errorf("failed to clear charts directory, %w", err)
-	}
-	if err := os.MkdirAll(chartsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create charts directory, %w", err)
-	}
-
 	// download all from remote;
 	gitCacheDir := filepath.Join(options.DataDir, "cache", "git")
 	if err := os.RemoveAll(gitCacheDir); err != nil {
@@ -200,7 +192,7 @@ func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
 		return fmt.Errorf("failed to create git cache directory, %w", err)
 	}
 	for _, service := range m.Services {
-		serviceChartDir := filepath.Join(chartsDir, service.Name)
+		serviceChartDir := serviceChartDir(options.DataDir, service.Name)
 		// copy templates;
 		cacheDir := filepath.Join(gitCacheDir, gitRefHash(service.Template.GitRef))
 		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
@@ -274,6 +266,10 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 		}
 	}
 	return nil
+}
+
+func serviceChartDir(rootDataDir, serviceName string) string {
+	return filepath.Join(rootDataDir, "charts", serviceName)
 }
 
 func copyTemplates(fromDir, toDir string) error {
