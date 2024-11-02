@@ -94,7 +94,7 @@ func (t ServiceValue) Validate(fieldPath string) error {
 	}
 	if t.SecretValueDecryptKeyPath != "" {
 		if _, err := os.Stat(t.SecretValueDecryptKeyPath); err != nil {
-			return fmt.Errorf("invalid %s.secretValueDecryptKeyPath value, %w", fieldPath)
+			return fmt.Errorf("invalid %s.secretValueDecryptKeyPath value, %w", fieldPath, err)
 		}
 	}
 	return nil
