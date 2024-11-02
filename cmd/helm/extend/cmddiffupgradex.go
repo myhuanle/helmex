@@ -62,7 +62,7 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 	for _, serviceName := range services {
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
-		args := []string{"diff upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		args := []string{"diff", "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = out
 		c.Stdout = out

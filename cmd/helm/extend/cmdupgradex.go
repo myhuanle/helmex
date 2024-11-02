@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type UpgradeXCmdOptions struct {
@@ -51,6 +52,8 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 		return fmt.Errorf("failed to load manifest, %w", err)
 	}
 
+	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", manifest.K8s+".kubeconfig")
+
 	// 圈定目标服务, 如果未指定特定的服务, 则渲染所有的服务;
 	services := options.Services
 	if len(services) == 0 {
@@ -65,10 +68,11 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 	for _, serviceName := range services {
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
-		args := []string{"upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		args := []string{"--kubeconfig", kubeconfig, "-n", manifest.Namespace, "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
 		if options.Install {
 			args = append(args, "--install")
 		}
+		fmt.Fprintf(out, "%s %s\n", os.Args[0], strings.Join(args, " "))
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = out
 		c.Stdout = out

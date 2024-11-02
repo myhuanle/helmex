@@ -12,11 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/pkg/errors"
-	gossh "golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 )
 
@@ -197,7 +193,7 @@ func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
 		cacheDir := filepath.Join(gitCacheDir, gitRefHash(service.Template.GitRef))
 		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
 			// pull from the remote if the cache does not exist;
-			if err := gitClone(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, cacheDir, service.Template.GitRef.SSHKeyPath); err != nil {
+			if err := gitCloneWithBin(service.Template.GitRef.URL, service.Template.GitRef.Branch, service.Template.GitRef.Commit, cacheDir, service.Template.GitRef.SSHKeyPath); err != nil {
 				return fmt.Errorf("failed to git clone service %s's template from %s, %w", service.Name, service.Template.GitRef.URL, err)
 			}
 		}
@@ -210,7 +206,7 @@ func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
 		cacheDir = filepath.Join(gitCacheDir, gitRefHash(service.Value.GitRef))
 		if _, err := os.Stat(filepath.Join(cacheDir, ".git")); err != nil {
 			// pull from the remote if the cache does not exist;
-			if err := gitClone(service.Value.GitRef.URL, service.Value.GitRef.Branch, service.Value.GitRef.Commit, cacheDir, service.Value.GitRef.SSHKeyPath); err != nil {
+			if err := gitCloneWithBin(service.Value.GitRef.URL, service.Value.GitRef.Branch, service.Value.GitRef.Commit, cacheDir, service.Value.GitRef.SSHKeyPath); err != nil {
 				return fmt.Errorf("failed to git clone service %s's value from %s, %w", service.Name, service.Template.GitRef.URL, err)
 			}
 		}
@@ -223,7 +219,52 @@ func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
 	return nil
 }
 
-func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
+// func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
+// 	if err := os.RemoveAll(toDir); err != nil {
+// 		return fmt.Errorf("failed to clear directory, %w", err)
+// 	}
+// 	if err := os.MkdirAll(toDir, 0755); err != nil {
+// 		return fmt.Errorf("failed to create directory, %w", err)
+// 	}
+
+// 	// read ssh key;
+// 	if sshKeyPath == "" {
+// 		sshKeyPath = filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
+// 	}
+// 	publicKeys, err := ssh.NewPublicKeysFromFile("git", sshKeyPath, "")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	publicKeys.HostKeyCallback = gossh.InsecureIgnoreHostKey()
+
+// 	// git clone;
+// 	repo, err := git.PlainClone(toDir, false, &git.CloneOptions{
+// 		URL:           url,
+// 		Auth:          publicKeys,
+// 		ReferenceName: plumbing.NewBranchReferenceName(branch),
+// 		SingleBranch:  true,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// checkout to commit;
+// 	if commit != "" {
+// 		worktree, err := repo.Worktree()
+// 		if err != nil {
+// 			return fmt.Errorf("failed to get worktree, %w", err)
+// 		}
+
+// 		if err = worktree.Checkout(&git.CheckoutOptions{
+// 			Hash: plumbing.NewHash(commit),
+// 		}); err != nil {
+// 			return fmt.Errorf("failed to checkout to %s, %w", commit, err)
+// 		}
+// 	}
+// 	return nil
+// }
+
+func gitCloneWithBin(url, branch, commit, toDir, sshKeyPath string) error {
 	if err := os.RemoveAll(toDir); err != nil {
 		return fmt.Errorf("failed to clear directory, %w", err)
 	}
@@ -235,34 +276,24 @@ func gitClone(url, branch, commit, toDir, sshKeyPath string) error {
 	if sshKeyPath == "" {
 		sshKeyPath = filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
 	}
-	publicKeys, err := ssh.NewPublicKeysFromFile("git", sshKeyPath, "")
-	if err != nil {
-		return err
-	}
-	publicKeys.HostKeyCallback = gossh.InsecureIgnoreHostKey()
-
-	// git clone;
-	repo, err := git.PlainClone(toDir, false, &git.CloneOptions{
-		URL:           url,
-		Auth:          publicKeys,
-		ReferenceName: plumbing.NewBranchReferenceName(branch),
-		SingleBranch:  true,
-	})
-	if err != nil {
-		return err
+	if err := os.Setenv("GIT_SSH_COMMAND", fmt.Sprintf("ssh -i %s", sshKeyPath)); err != nil {
+		return fmt.Errorf("failed to set GIT_SSH_COMMAND env, %w", err)
 	}
 
+	// git clone target;
+	c := exec.Command("git", "clone", "--single-branch", "--branch", branch, url, toDir)
+	c.Dir = toDir
+	b, err := c.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to git clone %s, err: %s", url, string(b))
+	}
 	// checkout to commit;
 	if commit != "" {
-		worktree, err := repo.Worktree()
+		c := exec.Command("git", "checkout", commit)
+		c.Dir = toDir
+		b, err := c.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("failed to get worktree, %w", err)
-		}
-
-		if err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(commit),
-		}); err != nil {
-			return fmt.Errorf("failed to checkout to %s, %w", commit, err)
+			return fmt.Errorf("failed to git checkout to commit %s in %s branch %s, err: %s", commit, url, branch, string(b))
 		}
 	}
 	return nil
