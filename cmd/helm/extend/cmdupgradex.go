@@ -1,6 +1,7 @@
 package extend
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -66,6 +67,7 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 
 	// 执行 upgrade;
 	for _, serviceName := range services {
+		errBuff := bytes.NewBuffer(nil)
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
 		args := []string{"--kubeconfig", kubeconfig, "-n", manifest.Namespace, "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
@@ -74,10 +76,10 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 		}
 		fmt.Fprintf(out, "%s %s\n", os.Args[0], strings.Join(args, " "))
 		c := exec.Command(os.Args[0], args...)
-		c.Stderr = out
+		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("error upgrade service %s, %w", serviceName)
+			return fmt.Errorf("error upgrade service %s, err: %s", serviceName, errBuff.String())
 		}
 	}
 	return nil

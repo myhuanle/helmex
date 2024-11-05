@@ -1,6 +1,7 @@
 package extend
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -60,14 +61,15 @@ func RunTemplateX(options *TemplateXCmdOptions, out io.Writer) error {
 
 	// 执行渲染;
 	for _, serviceName := range services {
+		errBuff := bytes.NewBuffer(nil)
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
 		args := []string{"template", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
 		c := exec.Command(os.Args[0], args...)
-		c.Stderr = out
+		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("error template service %s, %w", serviceName, err)
+			return fmt.Errorf("error template service %s, err: %s", serviceName, errBuff.String())
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package extend
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -60,14 +61,15 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 
 	// 执行 diff upgrade;
 	for _, serviceName := range services {
+		errBuff := bytes.NewBuffer(nil)
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
 		args := []string{"diff", "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
 		c := exec.Command(os.Args[0], args...)
-		c.Stderr = out
+		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return err
+			return fmt.Errorf("failed to diff upgrade service %s, err: %s", errBuff.String())
 		}
 	}
 	return nil
