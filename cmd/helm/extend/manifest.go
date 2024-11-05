@@ -281,7 +281,7 @@ func gitCloneWithBin(url, branch, commit, toDir, sshKeyPath string) error {
 	}
 
 	// git clone target;
-	c := exec.Command("git", "clone", "--single-branch", "--branch", branch, url, toDir)
+	c := exec.Command("git", "clone", "--single-branch", "--branch", branch, url, "./")
 	c.Dir = toDir
 	b, err := c.CombinedOutput()
 	if err != nil {

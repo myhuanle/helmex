@@ -162,6 +162,7 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	// Add subcommands
 	cmd.AddCommand(
 		// extend commands;
+		newCreateXCmd(out),
 		newBuildCmd(out),
 		newTemplateXCmd(out),
 		newDiffUpgradeXCmd(out),

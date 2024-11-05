@@ -77,7 +77,7 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 		c.Stderr = out
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return err
+			return fmt.Errorf("error upgrade service %s, %w", serviceName)
 		}
 	}
 	return nil
