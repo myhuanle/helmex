@@ -69,7 +69,7 @@ func RunTemplateX(options *TemplateXCmdOptions, out io.Writer) error {
 		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("error template service %s, err: %s", serviceName, errBuff.String())
+			return fmt.Errorf("error template service %s, %s", serviceName, errBuff.String())
 		}
 	}
 	return nil
