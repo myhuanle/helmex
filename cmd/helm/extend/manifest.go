@@ -89,7 +89,11 @@ func (t ServiceValue) Validate(fieldPath string) error {
 		return err
 	}
 	if t.SecretValueDecryptKeyPath != "" {
-		if _, err := os.Stat(t.SecretValueDecryptKeyPath); err != nil {
+		p, err := fileAbsPath(t.SecretValueDecryptKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid %s.secretValueDecryptKeyPath value, could not parse it to abstract path, %w", fieldPath, err)
+		}
+		if _, err := os.Stat(p); err != nil {
 			return fmt.Errorf("invalid %s.secretValueDecryptKeyPath value, %w", fieldPath, err)
 		}
 	}
@@ -367,8 +371,9 @@ func copyValues(fromDir, toDir string, secretDecoder SecretDecoder) error {
 					return fmt.Errorf("we detect helmsecret:// in values file %s:%d, but no secretValueDecryptKeyFile was not provided!", fromValueFile, lineNum)
 				}
 				// decode secret value;
-				key := line[0:strings.Index(line, ":")]
-				secretValue := strings.TrimSpace(line[strings.Index(line, ":"):])
+				colonIdx := strings.Index(line, ":")
+				key := line[0:colonIdx]
+				secretValue := strings.TrimSpace(line[colonIdx+1:])
 				plainValue, err := secretDecoder.Decode(secretValue)
 				if err != nil {
 					return fmt.Errorf("failed to decode secret at %s:%d, error: %w", fromValueFile, lineNum, err)

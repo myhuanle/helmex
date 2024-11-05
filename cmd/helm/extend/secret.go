@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -29,6 +30,10 @@ type SecretTool struct {
 }
 
 func NewSecretEncoder(publicKeyFile string) (*SecretTool, error) {
+	var err error
+	if publicKeyFile, err = fileAbsPath(publicKeyFile); err != nil {
+		return nil, fmt.Errorf("failed to parse public key file, %w", err)
+	}
 	b, err := os.ReadFile(publicKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key from file, %w", err)
@@ -52,6 +57,10 @@ func NewSecretEncoder(publicKeyFile string) (*SecretTool, error) {
 }
 
 func NewSecretDecoder(privateKeyFile string) (*SecretTool, error) {
+	var err error
+	if privateKeyFile, err = fileAbsPath(privateKeyFile); err != nil {
+		return nil, fmt.Errorf("failed to parse private key file, %w", err)
+	}
 	b, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key from file, %w", err)
@@ -100,7 +109,7 @@ func (t *SecretTool) Decode(secretData string) ([]byte, error) {
 		return nil, errors.New("secret tool had not been inited as decoder")
 	}
 	if !strings.HasPrefix(secretData, "helmsecret://") {
-		return nil, errors.New("invalid secret data, missing prefix helmsecret://")
+		return nil, fmt.Errorf("invalid secret data, missing prefix helmsecret://, secretData is `%s`", secretData)
 	}
 	secretData = strings.TrimPrefix(secretData, "helmsecret://")
 	b, err := base64.StdEncoding.DecodeString(secretData)
@@ -125,4 +134,17 @@ func secretDecoderFromFile(privateKeyFilePath string) SecretDecoder {
 		panic(fmt.Sprintf("failed to new secret decoder from file %s, %v", privateKeyFilePath, err))
 	}
 	return secretDecoder
+}
+
+func fileAbsPath(f string) (string, error) {
+	if strings.HasPrefix(f, "$HOME") || strings.HasPrefix(f, "${HOME}") {
+		fields := strings.Split(f, "/")
+		if len(fields) < 0 {
+			return "", fmt.Errorf("invalid file path, %w, err")
+		}
+		newFields := []string{os.Getenv("HOME")}
+		newFields = append(newFields, fields[1:]...)
+		f = filepath.Join(newFields...)
+	}
+	return filepath.Abs(f)
 }
