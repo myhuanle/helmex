@@ -187,6 +187,10 @@ func buildChartFrom(options *BuildCmdOptions, m *Manifest, _ io.Writer) error {
 	if err := os.MkdirAll(gitCacheDir, 0755); err != nil {
 		return fmt.Errorf("failed to create git cache directory, %w", err)
 	}
+	// clear chart directory;
+	if err := os.RemoveAll(chartDir(options.DataDir)); err != nil {
+		return fmt.Errorf("failed to clear chart directory, %w", err)
+	}
 	for _, service := range m.Services {
 		serviceChartDir := serviceChartDir(options.DataDir, service.Name)
 		// copy templates;
@@ -299,8 +303,12 @@ func gitCloneWithBin(url, branch, commit, toDir, sshKeyPath string) error {
 	return nil
 }
 
+func chartDir(rootDataDir string) string {
+	return filepath.Join(rootDataDir, "charts")
+}
+
 func serviceChartDir(rootDataDir, serviceName string) string {
-	return filepath.Join(rootDataDir, "charts", serviceName)
+	return filepath.Join(chartDir(rootDataDir), serviceName)
 }
 
 func copyTemplates(fromDir, toDir string) error {
