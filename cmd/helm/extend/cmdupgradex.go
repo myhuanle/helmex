@@ -70,7 +70,14 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 		errBuff := bytes.NewBuffer(nil)
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
-		args := []string{"--kubeconfig", kubeconfig, "-n", manifest.Namespace, "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		args := []string{
+			"--kubeconfig", kubeconfig,
+			"-n", manifest.Namespace,
+			"upgrade", helmReleaseName, chartDir,
+			"-f", filepath.Join(chartDir, "values.yaml"),
+			"--set", fmt.Sprintf("k8sName=%s", manifest.K8s),
+			"--set", fmt.Sprintf("namespace=%s", manifest.Namespace),
+		}
 		if options.Install {
 			args = append(args, "--install")
 		}

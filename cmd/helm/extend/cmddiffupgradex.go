@@ -64,7 +64,12 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 		errBuff := bytes.NewBuffer(nil)
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
-		args := []string{"diff", "upgrade", helmReleaseName, chartDir, "-f", filepath.Join(chartDir, "values.yaml")}
+		args := []string{
+			"diff", "upgrade", helmReleaseName, chartDir,
+			"-f", filepath.Join(chartDir, "values.yaml"),
+			"--set", fmt.Sprintf("k8sName=%s", manifest.K8s),
+			"--set", fmt.Sprintf("namespace=%s", manifest.Namespace),
+		}
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = errBuff
 		c.Stdout = out
