@@ -165,10 +165,11 @@ func loadManifest(file string) (*Manifest, error) {
 		serviceNameSet[service.Name] = struct{}{}
 		servicePriorityList = append(servicePriorityList, service.Priority)
 	}
-	sort.Reverse(sort.Ints(servicePriorityList))
+	sort.Ints(servicePriorityList)
 
 	sortedServices := make([][]*Service, 0, len(servicePriorityList))
-	for _, priority := range servicePriorityList {
+	for i := len(servicePriorityList) - 1; i >= 0; i-- {
+		priority := servicePriorityList[i]
 		serviceList := servicePriorityToList[priority]
 		sortedServices = append(sortedServices, serviceList)
 	}
