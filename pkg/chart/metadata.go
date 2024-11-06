@@ -119,9 +119,11 @@ func (md *Metadata) Validate() error {
 	if md.Version == "" {
 		return ValidationError("chart.metadata.version is required")
 	}
-	if !isValidSemver(md.Version) {
-		return ValidationErrorf("chart.metadata.version %q is invalid", md.Version)
-	}
+	// BY ZWF;
+	// remove version validation;
+	//if !isValidSemver(md.Version) {
+	//	return ValidationErrorf("chart.metadata.version %q is invalid", md.Version)
+	//}
 	if !isValidChartType(md.Type) {
 		return ValidationError("chart.metadata.type must be application or library")
 	}
