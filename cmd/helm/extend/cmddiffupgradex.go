@@ -49,6 +49,8 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 		return fmt.Errorf("failed to load manifest, %w", err)
 	}
 
+	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", manifest.K8s+".kubeconfig")
+
 	// 圈定目标服务, 如果未指定特定的服务, 则渲染所有的服务;
 	services := options.Services
 	if len(services) == 0 {
@@ -65,6 +67,8 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 		helmReleaseName := releaseName(manifest.K8s, manifest.Namespace, serviceName)
 		chartDir := serviceChartDir(options.DataDir, serviceName)
 		args := []string{
+			"--kubeconfig", kubeconfig,
+			"-n", manifest.Namespace,
 			"diff", "upgrade", helmReleaseName, chartDir,
 			"-f", filepath.Join(chartDir, "values.yaml"),
 			"--set", fmt.Sprintf("k8sName=%s", manifest.K8s),
@@ -74,7 +78,7 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("failed to diff upgrade service %s, %s", errBuff.String())
+			return fmt.Errorf("failed to diff upgrade service, %s", errBuff.String())
 		}
 	}
 	return nil
