@@ -164,10 +164,10 @@ func loadManifest(file string) (*Manifest, error) {
 		serviceList := servicePriorityToList[service.Priority]
 		if serviceList == nil {
 			serviceList = make([]*Service, 0)
+			servicePriorityList = append(servicePriorityList, service.Priority)
 		}
 		servicePriorityToList[service.Priority] = append(serviceList, service)
 		serviceNameSet[service.Name] = struct{}{}
-		servicePriorityList = append(servicePriorityList, service.Priority)
 	}
 	sort.Ints(servicePriorityList)
 
