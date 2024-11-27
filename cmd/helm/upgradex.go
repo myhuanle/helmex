@@ -24,6 +24,7 @@ func newUpgradeXCmd(out io.Writer) *cobra.Command {
 	f.StringVarP(&options.Manifest, "file", "f", "", "set manifest file")
 	f.StringSliceVarP(&options.Services, "service", "s", []string{}, "set services to render template")
 	f.BoolVar(&options.Install, "install", false, "to install release automatically if it did't exist")
+	f.BoolVar(&options.CreateNamespace, "create-namespace", false, "if --install is set, create the release namespace if not present")
 
 	if err := cmd.MarkFlagRequired("file"); err != nil {
 		panic(err)

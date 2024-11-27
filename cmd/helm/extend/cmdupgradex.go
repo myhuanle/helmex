@@ -24,6 +24,9 @@ type UpgradeXCmdOptions struct {
 	// Install 是否设置 --install 选项;
 	// +optional, default is false;
 	Install bool
+	// CreateNamespace 是否设置 --create-namespace 选项;
+	// +optional, default is false;
+	CreateNamespace bool
 }
 
 func (o UpgradeXCmdOptions) Validate() error {
@@ -80,6 +83,9 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 		}
 		if options.Install {
 			args = append(args, "--install")
+		}
+		if options.CreateNamespace {
+			args = append(args, "--create-namespace")
 		}
 		fmt.Fprintf(out, "%s %s\n", os.Args[0], strings.Join(args, " "))
 		c := exec.Command(os.Args[0], args...)
