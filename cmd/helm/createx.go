@@ -27,9 +27,9 @@ func newCreateXCmd(out io.Writer) *cobra.Command {
 	f.StringVar(&options.ChartFolderName, "chart-foldername", "", "optional to set the chart folder name")
 	f.StringVar(&options.ChartVersion, "chart-version", "", "required to set the chart version")
 	f.StringVar(&options.AppVersion, "app-version", "", "required to set the app version")
-	f.BoolVar(&options.NoValues, "no-values", false, "optional, if true no values.yaml in generated chart directory")
-	f.BoolVar(&options.NoCharts, "no-charts", false, "optional, if true no charts directory in generated chart directory")
-	f.BoolVar(&options.NoTemplates, "no-templates", false, "optional, if true no templates directory in generated chart directory")
+	f.BoolVar(&options.NoValues, "no-values", true, "optional, if true no values.yaml in generated chart directory")
+	f.BoolVar(&options.NoCharts, "no-charts", true, "optional, if true no charts directory in generated chart directory")
+	f.BoolVar(&options.NoTemplates, "no-templates", true, "optional, if true no templates directory content in generated chart directory")
 
 	if err := cmd.MarkFlagRequired("chart-name"); err != nil {
 		panic(err)

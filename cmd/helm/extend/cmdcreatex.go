@@ -61,6 +61,9 @@ func RunCreateX(options *CreateXCmdOptions, out io.Writer) error {
 		if err = os.RemoveAll(templatesDir); err != nil {
 			return fmt.Errorf("failed to remove templates directory from initial chart, %w", err)
 		}
+		if err = os.MkdirAll(templatesDir, 0755); err != nil {
+			return fmt.Errorf("failed to create empty templates directory for initial chart, %w", err)
+		}
 	}
 	if options.NoCharts {
 		chartsDir := filepath.Join("./", options.ChartName, "charts")
