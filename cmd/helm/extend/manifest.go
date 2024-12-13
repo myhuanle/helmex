@@ -40,6 +40,24 @@ func (m Manifest) Validate() error {
 	return nil
 }
 
+func (m Manifest) Check(out io.Writer) (pass bool) {
+	pass = true
+	for _, service := range m.Services {
+		// 检测模板文件和value文件的引用路径是否与集群名一致;
+		templatePath := service.Template.GitRef.Path
+		valuePath := service.Value.GitRef.Path
+		if !strings.Contains(templatePath, m.K8s) {
+			fmt.Fprintf(out, "Warning: template path `%s` of service `%s` was not matched with k8s name `%s`", templatePath, service.Name, m.K8s)
+			pass = false
+		}
+		if !strings.Contains(valuePath, m.K8s) {
+			fmt.Fprintf(out, "Warning: value path `%s` of service `%s` was not matched with k8s name `%s`", templatePath, service.Name, m.K8s)
+			pass = false
+		}
+	}
+	return pass
+}
+
 type Service struct {
 	Name     string          `yaml:"name"`
 	Priority int             `yaml:"priority"`

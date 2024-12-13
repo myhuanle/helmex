@@ -22,6 +22,7 @@ func newBuildCmd(out io.Writer) *cobra.Command {
 	f := cmd.Flags()
 	f.StringVarP(&options.DataDir, "data-dir", "d", "./", "set the temporary data directory")
 	f.StringVarP(&options.Manifest, "file", "f", "", "set manifest file")
+	f.BoolVarP(&options.IsCheck, "check", true, "If --check is true, helm will enable manifest check")
 
 	if err := cmd.MarkFlagRequired("file"); err != nil {
 		panic(err)

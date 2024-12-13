@@ -14,6 +14,9 @@ type BuildCmdOptions struct {
 	// Manifest 清单文件;
 	// +required;
 	Manifest string
+	// IsCheck 是否进行 manifest 自检;
+	// +optional; default is true;
+	IsCheck bool
 }
 
 func (o BuildCmdOptions) Validate() error {
@@ -41,6 +44,11 @@ func RunBuild(options *BuildCmdOptions, out io.Writer) error {
 	manifest, err := loadManifest(options.Manifest)
 	if err != nil {
 		return fmt.Errorf("failed to load manifest, %w", err)
+	}
+	if options.IsCheck {
+		if !manifest.Check(out) {
+			return errors.New("manifest check was not passed")
+		}
 	}
 
 	if err = buildChartFrom(options, manifest, out); err != nil {
