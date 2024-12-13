@@ -24,6 +24,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 	goYaml "sigs.k8s.io/yaml/goyaml.v3"
 )
@@ -57,6 +58,7 @@ func funcMap() template.FuncMap {
 		"toJson":        toJSON,
 		"fromJson":      fromJSON,
 		"fromJsonArray": fromJSONArray,
+		"notNil":        notNil,
 
 		// This is a placeholder for the "include" function, which is
 		// late-bound to a template. By declaring it here, we preserve the
@@ -204,4 +206,11 @@ func fromJSONArray(str string) []interface{} {
 		a = []interface{}{err.Error()}
 	}
 	return a
+}
+
+func notNil(msg string, v interface{}) (interface{}, error) {
+	if v == nil {
+		return nil, errors.New(msg)
+	}
+	return v, nil
 }
