@@ -43,15 +43,10 @@ func (m Manifest) Validate() error {
 func (m Manifest) Check(out io.Writer) (pass bool) {
 	pass = true
 	for _, service := range m.Services {
-		// 检测模板文件和value文件的引用路径是否与集群名一致;
-		templatePath := service.Template.GitRef.Path
+		// 检测value文件的引用路径是否与集群名一致;
 		valuePath := service.Value.GitRef.Path
-		if !strings.Contains(templatePath, m.K8s) {
-			fmt.Fprintf(out, "Warning: template path `%s` of service `%s` was not matched with k8s name `%s`", templatePath, service.Name, m.K8s)
-			pass = false
-		}
 		if !strings.Contains(valuePath, m.K8s) {
-			fmt.Fprintf(out, "Warning: value path `%s` of service `%s` was not matched with k8s name `%s`", templatePath, service.Name, m.K8s)
+			fmt.Fprintf(out, "\033[33mWarning: value path `%s` of service `%s` was not matched with k8s name `%s`\033[0m\n", valuePath, service.Name, m.K8s)
 			pass = false
 		}
 	}
