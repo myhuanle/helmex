@@ -11,15 +11,19 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
 type Manifest struct {
-	K8s       string     `yaml:"k8s"`
-	Namespace string     `yaml:"namespace"`
-	Services  []*Service `yaml:"services"`
+	K8s       string `yaml:"k8s"`
+	Namespace string `yaml:"namespace"`
+	// Labels 标签数据;
+	// 必须包含 displayName;
+	Labels   map[string]string `yaml:"labels"`
+	Services []*Service        `yaml:"services"`
 
 	// internal use only;
 	sortedServices [][]*Service
@@ -31,6 +35,19 @@ func (m Manifest) Validate() error {
 	}
 	if m.Namespace == "" {
 		return errors.New("namespace cannot be empty")
+	}
+	if len(m.Labels) == 0 {
+		return errors.New("labels cannot be empty")
+	}
+	displayName, ok := m.Labels["displayName"]
+	if !ok {
+		return errors.New("labels.displayName is required")
+	}
+	if displayName == "" {
+		return errors.New("labels.displayName cannot be empty")
+	}
+	if utf8.RuneCountInString(displayName) > 50 {
+		return errors.New("labels.displayName is too long, it exceedes 50 UTF-8 characters")
 	}
 	for idx, service := range m.Services {
 		if err := service.Validate(fmt.Sprintf("services[%d]", idx)); err != nil {
