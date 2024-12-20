@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 )
 
 type DiffUpgradeXCmdOptions struct {
@@ -20,6 +21,10 @@ type DiffUpgradeXCmdOptions struct {
 	// Services 指定只渲染特定的服务模板, 默认渲染全部;
 	// +optional;
 	Services []string
+	// Context 设置显示 diff 的上下文行数;
+	// +optional;
+	// 默认为 -1, 显示全部;
+	Context int
 }
 
 func (o DiffUpgradeXCmdOptions) Validate() error {
@@ -73,6 +78,7 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 			"-f", filepath.Join(chartDir, "values.yaml"),
 			"--set", fmt.Sprintf("k8sName=%s", manifest.K8s),
 			"--set", fmt.Sprintf("namespace=%s", manifest.Namespace),
+			"--context", strconv.Itoa(options.Context),
 		}
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = errBuff
