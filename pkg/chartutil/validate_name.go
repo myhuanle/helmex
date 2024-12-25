@@ -58,7 +58,7 @@ const (
 	// therefore need to limit it to 63 chars and reserve 10 chars for additional part to name
 	// of the resource. The reason is that chart maintainers can use release name as part of
 	// the resource name (and some additional chars).
-	maxReleaseNameLen = 53
+	maxReleaseNameLen = 63
 	// maxMetadataNameLen is the maximum length Kubernetes allows for any name.
 	maxMetadataNameLen = 253
 )
