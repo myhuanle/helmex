@@ -76,5 +76,6 @@ func RunDecrypt(options *DecryptCmdOptions, out io.Writer) error {
 	if err = os.WriteFile(absOutputFile, rawData, 0644); err != nil {
 		return fmt.Errorf("failed to write decrypted data into output file, %w", err)
 	}
+	fmt.Printf("To see the secret in file %s\n", absOutputFile)
 	return nil
 }
