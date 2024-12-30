@@ -21,7 +21,8 @@ type Manifest struct {
 	K8s       string `yaml:"k8s"`
 	Namespace string `yaml:"namespace"`
 	// Labels 标签数据;
-	// 必须包含 displayName;
+	// 必须包含 category, 表示环境分类, enum: ["test", "pre", "prd"]
+	// 必须包含 displayName, 表示环境的显示中文.
 	Labels   map[string]string `yaml:"labels"`
 	Services []*Service        `yaml:"services"`
 
@@ -38,6 +39,13 @@ func (m Manifest) Validate() error {
 	}
 	if len(m.Labels) == 0 {
 		return errors.New("labels cannot be empty")
+	}
+	category, ok := m.Labels["category"]
+	if !ok {
+		return errors.New("labels.category is required")
+	}
+	if category != "test" && category != "pre" && category != "prd" {
+		return errors.New(`labels.category must be one of ["test", "pre", "prd"]`)
 	}
 	displayName, ok := m.Labels["displayName"]
 	if !ok {
