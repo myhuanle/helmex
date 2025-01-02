@@ -21,8 +21,9 @@ type Manifest struct {
 	K8s       string `yaml:"k8s"`
 	Namespace string `yaml:"namespace"`
 	// Labels 标签数据;
-	// 必须包含 category, 表示环境分类, enum: ["test", "pre", "prd"]
-	// 必须包含 displayName, 表示环境的显示中文.
+	// 必须包含 k8sName,
+	// 必须包含 env, 表示环境分类, enum: ["test", "stress", "preview", "prod"]
+	// 必须包含 namespaceName, 表示命名空间描述;
 	Labels   map[string]string `yaml:"labels"`
 	Services []*Service        `yaml:"services"`
 
@@ -40,23 +41,37 @@ func (m Manifest) Validate() error {
 	if len(m.Labels) == 0 {
 		return errors.New("labels cannot be empty")
 	}
-	category, ok := m.Labels["category"]
+
+	k8sName, ok := m.Labels["k8sName"]
 	if !ok {
-		return errors.New("labels.category is required")
+		return errors.New("labels.k8sName is required")
 	}
-	if category != "test" && category != "pre" && category != "prd" {
-		return errors.New(`labels.category must be one of ["test", "pre", "prd"]`)
+	if k8sName == "" {
+		return errors.New("labels.k8sName cannot be empty")
 	}
-	displayName, ok := m.Labels["displayName"]
+	if utf8.RuneCountInString(k8sName) > 50 {
+		return errors.New("labels.k8sName is too long, it exceedes 50 UTF-8 characters")
+	}
+
+	env, ok := m.Labels["env"]
 	if !ok {
-		return errors.New("labels.displayName is required")
+		return errors.New("labels.env is required")
 	}
-	if displayName == "" {
-		return errors.New("labels.displayName cannot be empty")
+	if env != "test" && env != "stress" && env != "preview" && env != "prod" {
+		return errors.New(`labels.env must be one of ["test", "stress", "preview", "prod"]`)
 	}
-	if utf8.RuneCountInString(displayName) > 50 {
-		return errors.New("labels.displayName is too long, it exceedes 50 UTF-8 characters")
+
+	namespaceName, ok := m.Labels["namespaceName"]
+	if !ok {
+		return errors.New("labels.namespaceName is required")
 	}
+	if namespaceName == "" {
+		return errors.New("labels.namespaceName cannot be empty")
+	}
+	if utf8.RuneCountInString(namespaceName) > 50 {
+		return errors.New("labels.namespaceName is too long, it exceedes 50 UTF-8 characters")
+	}
+
 	for idx, service := range m.Services {
 		if err := service.Validate(fmt.Sprintf("services[%d]", idx)); err != nil {
 			return err
