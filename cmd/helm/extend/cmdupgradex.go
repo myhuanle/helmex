@@ -58,11 +58,17 @@ func RunUpgradeX(options *UpgradeXCmdOptions, out io.Writer) error {
 
 	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", manifest.K8s+".kubeconfig")
 
-	// 圈定目标服务, 如果未指定特定的服务, 则渲染所有的服务;
-	services := options.Services
-	if len(services) == 0 {
-		for _, serviceList := range manifest.sortedServices {
-			for _, s := range serviceList {
+	userSelectedServiceSet := make(map[string]any)
+	services := []string{}
+	for _, s := range options.Services {
+		userSelectedServiceSet[s] = nil
+	}
+	// 如果未指定特定的服务, 则渲染所有的服务;
+	for _, serviceList := range manifest.sortedServices {
+		for _, s := range serviceList {
+			// 命中用户手动指定的服务, 或者用户没有手动指定服务;
+			_, ok := userSelectedServiceSet[s.Name]
+			if ok || len(userSelectedServiceSet) == 0 {
 				services = append(services, s.Name)
 			}
 		}
