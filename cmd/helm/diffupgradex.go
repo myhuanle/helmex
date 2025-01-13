@@ -24,6 +24,7 @@ func newDiffUpgradeXCmd(out io.Writer) *cobra.Command {
 	f.StringVarP(&options.Manifest, "file", "f", "", "set manifest file")
 	f.StringSliceVarP(&options.Services, "service", "s", []string{}, "set services to render template")
 	f.IntVarP(&options.Context, "context", "C", -1, "output NUM lines of context around changes")
+	f.BoolVar(&options.AllowUnReleased, "allow-unreleased", false, "enables diffing of releases that are not yet deployed via Helm")
 
 	if err := cmd.MarkFlagRequired("file"); err != nil {
 		panic(err)

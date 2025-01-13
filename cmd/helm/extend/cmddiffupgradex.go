@@ -25,6 +25,10 @@ type DiffUpgradeXCmdOptions struct {
 	// +optional;
 	// 默认为 -1, 显示全部;
 	Context int
+	// AllowUnReleased enables diffing of releases that are not yet deployed via Helm;
+	// +optional;
+	// 默认为 false;
+	AllowUnReleased bool
 }
 
 func (o DiffUpgradeXCmdOptions) Validate() error {
@@ -79,6 +83,7 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 			"--set", fmt.Sprintf("k8sName=%s", manifest.K8s),
 			"--set", fmt.Sprintf("namespace=%s", manifest.Namespace),
 			"--context", strconv.Itoa(options.Context),
+			fmt.Sprintf("--allow-unreleased=%t", options.AllowUnReleased),
 		}
 		c := exec.Command(os.Args[0], args...)
 		c.Stderr = errBuff
