@@ -89,7 +89,7 @@ func RunDiffUpgradeX(options *DiffUpgradeXCmdOptions, out io.Writer) error {
 		c.Stderr = errBuff
 		c.Stdout = out
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("failed to diff upgrade service, %s", errBuff.String())
+			return fmt.Errorf("failed to diff upgrade service %s, %s", serviceName, errBuff.String())
 		}
 	}
 	return nil
