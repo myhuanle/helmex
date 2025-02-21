@@ -20,7 +20,7 @@ type Manifest struct {
 	K8s       string `yaml:"k8s"`
 	Namespace string `yaml:"namespace"`
 	// Labels 标签数据;
-	Labels   map[string]string `yaml:"labels"`
+	Labels   map[string]any `yaml:"labels"`
 	Services []*Service        `yaml:"services"`
 
 	// internal use only;
